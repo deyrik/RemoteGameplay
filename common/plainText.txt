@@ -1,0 +1,26 @@
+streamGamer/
+├── Makefile
+├── common/
+│   └── Interfaces.hpp                          # Estrutura de pacotes de rede (SOLID) 
+│   └── plainText.txt                           # Descrição do projeto
+├── server/
+│   └── main_server.cpp                         # Host: Transmite A/V e recebe comandos
+│   └── injectors/
+│       ├── LinuxX11Injector.hpp                # Exclusivo Linux (XTest)
+│       ├── LinuxVirtualGamepad.hpp             # Emulador Xbox 360 via /dev/uinput (Linux)
+│       ├── WindowsInputInjector.hpp            # Exclusivo Windows (SendInput)
+│       ├── WindowsVirtualGamepad.hpp           # Emulador Xbox 360 (Windows ViGEm / Fallback)
+│       ├── IVirtualGamepad.hpp                 # Contrato para Gamepads Virtuais
+│       └── InputInjectorFactory.hpp            # Decide qual instanciar
+└── client/
+    └── main_client.cpp                         # Cliente: Recebe A/V (GStreamer) e envia comandos
+    └── controllers/
+        ├── IInputController.hpp                # Interface base para qualquer controle (SOLID)
+        ├── UdpInputDispatcher.hpp              # Transporte UDP isolado (SRP)
+        ├── LinuxKeyboardMouseController.hpp    # Controlador padrão (Teclado + Mouse) - Captura Teclado (Down/Up) + Mouse via X11
+        ├── LinuxGamepadController.hpp          # Lê qualquer controle em /dev/input/js0 - Captura Xbox/PlayStation/USB
+        ├── WindowsKeyboardMouseController.hpp  # Controlador para Windows (Teclado + Mouse) - Captura Teclado (Down/Up) + Mouse via Windows
+        ├── WindowsGamepadController.hpp        # Lê qualquer controle em DirectInput (XInput/DirectInput) - Captura Xbox/PlayStation/USB
+        ├── ClientControllerFactory.hpp         # Decide qual controlador instanciar
+        └── InputControllerManager.hpp          # 5. Orquestrador de múltiplos controles (Composite)
+
