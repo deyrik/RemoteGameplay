@@ -12,15 +12,28 @@ streamGamer/
 │       ├── WindowsVirtualGamepad.hpp           # Emulador Xbox 360 (Windows ViGEm / Fallback)
 │       ├── IVirtualGamepad.hpp                 # Contrato para Gamepads Virtuais
 │       └── InputInjectorFactory.hpp            # Decide qual instanciar
-└── client/
-    └── main_client.cpp                         # Cliente: Recebe A/V (GStreamer) e envia comandos
-    └── controllers/
-        ├── IInputController.hpp                # Interface base para qualquer controle (SOLID)
-        ├── UdpInputDispatcher.hpp              # Transporte UDP isolado (SRP)
-        ├── LinuxKeyboardMouseController.hpp    # Controlador padrão (Teclado + Mouse) - Captura Teclado (Down/Up) + Mouse via X11
-        ├── LinuxGamepadController.hpp          # Lê qualquer controle em /dev/input/js0 - Captura Xbox/PlayStation/USB
-        ├── WindowsKeyboardMouseController.hpp  # Controlador para Windows (Teclado + Mouse) - Captura Teclado (Down/Up) + Mouse via Windows
-        ├── WindowsGamepadController.hpp        # Lê qualquer controle em DirectInput (XInput/DirectInput) - Captura Xbox/PlayStation/USB
-        ├── ClientControllerFactory.hpp         # Decide qual controlador instanciar
-        └── InputControllerManager.hpp          # 5. Orquestrador de múltiplos controles (Composite)
-
+│
+├── client/
+│   └── main_client.cpp                         # Cliente: Recebe A/V (GStreamer) e envia comandos
+│   └── controllers/
+│       ├── IInputController.hpp                # Interface base para qualquer controle (SOLID)
+│       ├── UdpInputDispatcher.hpp              # Transporte UDP isolado (SRP)
+│       ├── LinuxKeyboardMouseController.hpp    # Controlador padrão (Teclado + Mouse) - Captura Teclado (Down/Up) + Mouse via X11
+│       ├── LinuxGamepadController.hpp          # Lê qualquer controle em /dev/input/js0 - Captura Xbox/PlayStation/USB
+│       ├── WindowsKeyboardMouseController.hpp  # Controlador para Windows (Teclado + Mouse) - Captura Teclado (Down/Up) + Mouse via Windows
+│       ├── WindowsGamepadController.hpp        # Lê qualquer controle em DirectInput (XInput/DirectInput) - Captura Xbox/PlayStation/USB
+│       ├── ClientControllerFactory.hpp         # Decide qual controlador instanciar
+│       └── InputControllerManager.hpp          # 5. Orquestrador de múltiplos controles (Composite)
+│
+└──web/
+    ├── webrtc_gateway.py                       # Servidor HTTP/WS e Ponte RTP <-> WebRTC
+    └── static/
+        ├── index.html                          # [SRP] Apenas estrutura semântica (DOM)
+        ├── css/
+        │   └── style.css                       # [SRP] Apenas layout e estilização visual
+        └── js/
+            ├── main.js                         # [SRP] Orquestrador (equivalente ao main_client.cpp)
+            ├── WebRTCMediaEngine.js            # [SRP] Negociação SDP/ICE e reprodução do stream
+            ├── WsInputDispatcher.js            # [SRP] Protocolo binário de 8 bytes e escuta de Rumble
+            ├── KeyboardMouseController.js      # [SRP] Pointer Lock (F1), sensor bruto, cliques e scroll
+            └── GamepadController.js            # [SRP] HTML5 Gamepad API, perfil (type=6) e vibração (type=7)

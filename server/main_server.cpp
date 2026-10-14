@@ -42,58 +42,66 @@ private:
     }
 
     // Seleciona automaticamente: 1º GPU Dedicada -> 2º Vídeo Integrado (iGPU) -> 3º CPU (Fallback)
+    // Todos forçados em constrained-baseline + byte-stream para compatibilidade total com WebRTC
     static std::string selectBestVideoEncoder() {
+        const std::string h264WebRtcCaps = 
+            " ! video/x-h264,profile=constrained-baseline,stream-format=byte-stream ! h264parse config-interval=-1";
+
         #if defined(_WIN32)
             if (isHardwareEncoderAvailable("nvh264enc")) {
                 std::cout << "[Encoder] GPU NVIDIA detectada! Usando aceleracao de hardware (NVENC)." << std::endl;
-                return "videoconvert ! nvh264enc bitrate=6000 preset=low-latency-hq zerolatency=true gop-size=30 bframes=0";
+                return "videoconvert ! nvh264enc bitrate=4000 preset=low-latency-hq zerolatency=true gop-size=30 bframes=0" + h264WebRtcCaps;
             }
             if (isHardwareEncoderAvailable("amfh264enc")) {
                 std::cout << "[Encoder] GPU AMD detectada! Usando aceleracao de hardware (AMF)." << std::endl;
-                return "videoconvert ! amfh264enc bitrate=6000 usage=ultra-low-latency gop-size=30";
+                return "videoconvert ! amfh264enc bitrate=4000 usage=ultra-low-latency gop-size=30" + h264WebRtcCaps;
             }
             if (isHardwareEncoderAvailable("qsvh264enc")) {
                 std::cout << "[Encoder] GPU/iGPU Intel detectada! Usando aceleracao de hardware (QuickSync)." << std::endl;
-                return "videoconvert ! qsvh264enc bitrate=6000 low-latency=true gop-size=30 bframes=0";
+                return "videoconvert ! qsvh264enc bitrate=4000 low-latency=true gop-size=30 bframes=0" + h264WebRtcCaps;
+            }
+            if (isHardwareEncoderAvailable("vah264enc")) {
+                std::cout << "[Encoder] GPU/iGPU AMD ou Intel detectada! Usando aceleracao VA-API moderna (vah264enc)." << std::endl;
+                return "videoconvert ! vah264enc bitrate=4000 key-int-max=30 b-frames=0 aud=false" + h264WebRtcCaps;
             }
         #else
             if (isHardwareEncoderAvailable("nvh264enc")) {
                 std::cout << "[Encoder] GPU NVIDIA detectada no Linux! Usando aceleracao de hardware (NVENC)." << std::endl;
-                return "videoconvert ! nvh264enc bitrate=6000 preset=low-latency-hq zerolatency=true gop-size=30 bframes=0";
+                return "videoconvert ! nvh264enc bitrate=4000 preset=low-latency-hq zerolatency=true gop-size=30 bframes=0" + h264WebRtcCaps;
             }
             if (isHardwareEncoderAvailable("vah264enc")) {
-                std::cout << "[Encoder] GPU/iGPU AMD ou Intel detectada! Usando aceleracao VA-API moderna (vah264enc)." << std::endl;
-                return "videoconvert ! vah264enc bitrate=6000 key-int-max=30 b-frames=0";
+                std::cout << "[Encoder] GPU/iGPU AMD ou Intel detectada! Usando aceleracao VA-API moderna (vah264enc WebRTC)." << std::endl;
+                return "videoconvert ! vah264enc bitrate=4000 key-int-max=30 b-frames=0 aud=false" + h264WebRtcCaps;
             }
             if (isHardwareEncoderAvailable("vaapih264enc")) {
                 std::cout << "[Encoder] GPU/iGPU AMD ou Intel detectada! Usando aceleracao VA-API (vaapih264enc)." << std::endl;
-                return "videoconvert ! vaapih264enc rate-control=cbr bitrate=6000 keyframe-period=30 max-bframes=0";
+                return "videoconvert ! vaapih264enc rate-control=cbr bitrate=4000 keyframe-period=30 max-bframes=0" + h264WebRtcCaps;
             }
         #endif
 
         std::cout << "[Encoder] Nenhum acelerador de hardware ativo. Usando CPU (x264enc ultrafast)." << std::endl;
         return "videoconvert ! video/x-raw,format=I420,framerate=30/1 ! "
-               "x264enc bitrate=6000 tune=zerolatency speed-preset=ultrafast key-int-max=30 bframes=0";
+               "x264enc bitrate=4000 tune=zerolatency speed-preset=ultrafast key-int-max=30 bframes=0" + h264WebRtcCaps;
     }
 
-#if !defined(_WIN32)
-    // Descobre automaticamente o canal "Monitor" (som interno do sistema) no Linux
-    static std::string getLinuxSystemAudioMonitor() {
-        char buffer[256];
-        std::string sinkName;
-        FILE* pipe = popen("pactl get-default-sink 2>/dev/null", "r");
-        if (pipe) {
-            if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
-                sinkName = buffer;
-                if (!sinkName.empty() && sinkName.back() == '\n') {
-                    sinkName.pop_back();
+    #if !defined(_WIN32)
+        // Descobre automaticamente o canal "Monitor" (som interno do sistema) no Linux
+        static std::string getLinuxSystemAudioMonitor() {
+            char buffer[256];
+            std::string sinkName;
+            FILE* pipe = popen("pactl get-default-sink 2>/dev/null", "r");
+            if (pipe) {
+                if (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                    sinkName = buffer;
+                    if (!sinkName.empty() && sinkName.back() == '\n') {
+                        sinkName.pop_back();
+                    }
                 }
+                pclose(pipe);
             }
-            pclose(pipe);
+            return sinkName.empty() ? "" : "device=\"" + sinkName + ".monitor\" ";
         }
-        return sinkName.empty() ? "" : "device=\"" + sinkName + ".monitor\" ";
-    }
-#endif
+    #endif
 
 public:
     DesktopScreenPipelineBuilder(std::string ip, int vPort, int aPort)
@@ -103,7 +111,8 @@ public:
         std::string videoEncoder = selectBestVideoEncoder();
 
         #if defined(_WIN32)
-            return "d3d11screencapturesrc ! queue max-size-buffers=1 leaky=downstream ! " +
+            return "d3d11screencapturesrc ! queue max-size-buffers=1 leaky=downstream ! "
+                   "videoscale ! video/x-raw,width=1280,height=720,framerate=30/1 ! " +
                    videoEncoder + " ! "
                    "rtph264pay config-interval=-1 pt=96 ! "
                    "udpsink host=" + clientIp + " port=" + std::to_string(videoPort) + " sync=false async=false "
@@ -114,9 +123,10 @@ public:
                    "rtpopuspay pt=96 ! "
                    "udpsink host=" + clientIp + " port=" + std::to_string(audioPort) + " sync=false async=false";
         #else
-            return "ximagesrc use-damage=0 ! queue max-size-buffers=1 leaky=downstream ! " +
+            return "ximagesrc use-damage=0 ! queue max-size-buffers=1 leaky=downstream ! "
+                   "videoscale ! video/x-raw,width=1280,height=720,framerate=30/1 ! " +
                    videoEncoder + " ! "
-                   "rtph264pay config-interval=-1 pt=96 ! "
+                   "rtph264pay config-interval=-1 mtu=1200 pt=96 ! "
                    "udpsink host=" + clientIp + " port=" + std::to_string(videoPort) + " sync=false async=false "
                    
                    "pulsesrc " + getLinuxSystemAudioMonitor() +

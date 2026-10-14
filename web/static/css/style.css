@@ -1,0 +1,53 @@
+body {
+    margin: 0;
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: system-ui, -apple-system, sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#hud {
+    width: 100%;
+    background: #161b22;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #30363d;
+    box-sizing: border-box;
+    font-size: 14px;
+}
+
+.badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: #238636;
+    font-weight: bold;
+    transition: background 0.2s ease;
+}
+
+.badge.disconnected {
+    background: #da3633;
+}
+
+#video-container {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+
+video {
+    width: 1280px;
+    height: 720px;
+    max-width: 98vw;
+    max-height: 90vh;
+    background: #000;
+    border: 2px solid #30363d;
+    border-radius: 6px;
+}
